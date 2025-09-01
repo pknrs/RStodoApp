@@ -11,15 +11,17 @@ workflows:
     scripts:
       - name: Install npm dependencies
         script: |
-          npm install
+          npm install --legacy-peer-deps
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Ensure gradlew is executable
+        script: |
+          chmod +x android/gradlew
       - name: Build Android release
         script: |
           cd android
-          chmod +x gradlew
-          ./gradlew bundleRelease
+          ./gradlew clean bundleRelease --no-daemon --stacktrace
     artifacts:
       - android/app/build/outputs/**/*.aab
     publishing:
