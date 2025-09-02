@@ -26,17 +26,17 @@ workflows:
           ./gradlew clean bundleRelease --no-daemon --stacktrace
     artifacts:
       - android/app/build/outputs/**/*.aab
-    publishing:
-      google_play:
-        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: true
-      email:
-        recipients:
-          - praveen@resiliencesoft.com
-        notify:
-          success: true
-          failure: true
+    # publishing:
+    #   google_play:
+    #     credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+    #     submit_as_draft: true
+    #   email:
+    #     recipients:
+    #       - praveen@resiliencesoft.com
+    #     notify:
+    #       success: true
+    #       failure: true
   react-native-ios:
     name: React Native iOS
     max_build_duration: 120
@@ -50,6 +50,8 @@ workflows:
       vars:
         BUNDLE_ID: 'com.rstodoapp'
         APP_STORE_APPLE_ID: 6751834361
+        XCODE_WORKSPACE: 'RStodoApp.xcworkspace'
+        XCODE_SCHEME: 'RStodoApp'
     scripts:
       - name: Install npm dependencies
         script: |
