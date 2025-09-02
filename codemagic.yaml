@@ -5,9 +5,11 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       android_signing:
-        - rstodoappkey
+        - rstodoappkeystore
       vars:
         PACKAGE_NAME: 'com.rstodoapp'
+      groups:
+        - google_credentials
     scripts:
       - name: Install npm dependencies
         script: |
@@ -25,6 +27,10 @@ workflows:
     artifacts:
       - android/app/build/outputs/**/*.aab
     publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
       email:
         recipients:
           - praveen@resiliencesoft.com
