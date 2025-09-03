@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -9,6 +8,9 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 type Todo = {
   id: string;
@@ -84,47 +86,49 @@ export default function App() {
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <Text style={[styles.heading, { color: theme.text }]}>📝 Todo App</Text>
+    <SafeAreaProvider>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
+      >
+        <Text style={[styles.heading, { color: theme.text }]}>📝 Todo App</Text>
 
-      {/* Input */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Enter a note..."
-          placeholderTextColor={theme.placeholder}
-          style={[
-            styles.input,
-            {
-              color: theme.text,
-              borderColor: theme.border,
-              backgroundColor: theme.card,
-            },
-          ]}
+        {/* Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="Enter a note..."
+            placeholderTextColor={theme.placeholder}
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: theme.card,
+              },
+            ]}
+          />
+          <TouchableOpacity
+            onPress={addTodo}
+            style={[styles.addBtn, { backgroundColor: theme.primary }]}
+          >
+            <Text style={styles.addBtnText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Todo List */}
+        <FlatList
+          data={todos}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <Text style={[styles.empty, { color: theme.placeholder }]}>
+              No notes yet
+            </Text>
+          }
         />
-        <TouchableOpacity
-          onPress={addTodo}
-          style={[styles.addBtn, { backgroundColor: theme.primary }]}
-        >
-          <Text style={styles.addBtnText}>Add</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Todo List */}
-      <FlatList
-        data={todos}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={[styles.empty, { color: theme.placeholder }]}>
-            No notes yet
-          </Text>
-        }
-      />
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
