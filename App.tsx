@@ -11,7 +11,6 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 type Todo = {
   id: string;
   text: string;
