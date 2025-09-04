@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FlatList,
+  PermissionsAndroid,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -8,8 +10,9 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import notifee, { AndroidImportance } from '@notifee/react-native';
 
 type Todo = {
   id: string;
@@ -17,11 +20,37 @@ type Todo = {
   done: boolean;
 };
 
+// Display notification via Notifee
+async function displayNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage) {
+  await notifee.requestPermission();
+
+  // Create a channel (Android only, required)
+  const channelId = await notifee.createChannel({
+    id: 'default',
+    name: 'Default Channel',
+    importance: AndroidImportance.HIGH,
+  });
+
+  await notifee.displayNotification({
+    title: remoteMessage.notification?.title || 'New Notification',
+    body: remoteMessage.notification?.body || 'You have a new message',
+    android: {
+      channelId,
+      smallIcon: 'ic_launcher',
+      pressAction: { id: 'default' },
+    },
+    ios: {
+      sound: 'default',
+    },
+  });
+}
+
+
 export default function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState('');
-  const scheme = useColorScheme(); // "light" or "dark"
 
+  const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = {
     background: isDark ? '#121212' : '#f5f5f5',
@@ -32,6 +61,98 @@ export default function App() {
     primary: '#4CAF50',
     danger: '#FF5252',
   };
+
+  // Request notification permission (iOS + Android, handles all cases)
+  async function requestUserPermission() {
+    try {
+      if (Platform.OS === 'ios') {
+        const authStatus = await messaging().requestPermission();
+        const enabled =
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+        if (enabled) {
+          await registerDeviceForMessaging();
+        }
+      } else if (Platform.OS === 'android') {
+        if (Platform.Version >= 33) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            await registerDeviceForMessaging();
+          }
+        } else {
+          await registerDeviceForMessaging();
+        }
+      }
+    } catch (error) {
+      console.error('Error requesting permission:', error);
+    }
+  }
+
+  // Register device with FCM and fetch initial token
+  async function registerDeviceForMessaging() {
+    try {
+      await messaging().registerDeviceForRemoteMessages();
+      const token = await messaging().getToken();
+      console.log('FCM Token:', token);
+    } catch (error) {
+      console.error('Error registering device:', error);
+    }
+  }
+
+  // Listen for FCM token refresh events
+  useEffect(() => {
+    const unsubscribeToken = messaging().onTokenRefresh(token => {
+      console.log('New FCM Token:', token);
+    });
+
+    return unsubscribeToken;
+  }, []);
+
+  // Ask for notification permission on app mount
+  useEffect(() => {
+    requestUserPermission();
+  });
+
+  // Handle foreground and background push notifications
+  useEffect(() => {
+    // Foreground
+    const unsubscribeForeground = messaging().onMessage(
+      async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+        console.log('Foreground notification:', remoteMessage);
+        await displayNotification(remoteMessage);
+      },
+    );
+
+    // Background
+    messaging().setBackgroundMessageHandler(
+      async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+        console.log('Background notification:', remoteMessage);
+        await displayNotification(remoteMessage);
+      },
+    );
+
+    // When the app is opened from a notification
+    const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('Notification caused app to open from background:', remoteMessage);
+    });
+
+    // When the app is opened from a quit state via notification
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log('Notification caused app to open from quit state:', remoteMessage);
+        }
+      });
+
+    return () => {
+      unsubscribeForeground();
+      unsubscribeOpened();
+    };
+  }, []);
 
   // Add new todo
   const addTodo = () => {
